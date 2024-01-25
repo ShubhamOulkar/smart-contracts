@@ -1,1 +1,1 @@
-# solidity-bootcamp
+# smart contracts written in solidity
