@@ -1,1 +1,1 @@
-# smart contracts written in solidity
+# Basic smart contracts written in solidity
