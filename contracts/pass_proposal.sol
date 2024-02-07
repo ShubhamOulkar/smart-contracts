@@ -3,10 +3,8 @@ pragma solidity ^0.8.18;
 
 contract ProposalContract {
     // ****************** Data ***********************
-
-    //Owner
-    address owner;
-
+    address public  owner;
+    address[] private voted_addresses; 
     uint256 private counter;
 
     struct Proposal {
@@ -22,21 +20,19 @@ contract ProposalContract {
 
     mapping(uint256 => Proposal) proposal_history; // Recordings of previous proposals
 
-    address[] private voted_addresses; 
-
     //constructor
     constructor() {
         owner = msg.sender;
         voted_addresses.push(msg.sender);
     }
-
+    //change 0 :-  improved modifiers for developers
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == owner, "Only owner can call this function");
         _;
     }
 
     modifier active() {
-        require(proposal_history[counter].is_active == true);
+        require(proposal_history[counter].is_active == true, "Proposal is not active");
         _;
     }
 
@@ -60,22 +56,21 @@ contract ProposalContract {
 
     function vote(uint8 choice) external active newVoter(msg.sender){
         Proposal storage proposal = proposal_history[counter];
-        uint256 total_vote = proposal.approve + proposal.reject + proposal.pass;
+        uint256 approve = proposal.approve;
+        uint256 reject = proposal.reject;
+        uint256 pass = proposal.pass;
 
         voted_addresses.push(msg.sender);
 
-        if (choice == 1) {
-            proposal.approve += 1;
-            proposal.current_state = calculateCurrentState();
-        } else if (choice == 2) {
-            proposal.reject += 1;
-            proposal.current_state = calculateCurrentState();
-        } else if (choice == 0) {
-            proposal.pass += 1;
-            proposal.current_state = calculateCurrentState();
-        }
+        if (choice == 1) proposal.approve += 1;
+        if (choice == 2) proposal.reject += 1;
+        if (choice == 0) proposal.pass += 1;
+        
+        //change 1 - check current state once after increment
+        proposal.current_state = calculateCurrentState();
 
-        if ((proposal.total_vote_to_end - total_vote == 1) && (choice == 1 || choice == 2 || choice == 0)) {
+        // change 2 - if total vote reach threshold make proposal inactive
+        if ((proposal.total_vote_to_end == (approve + reject + pass) ) ) {
             proposal.is_active = false;
             voted_addresses = [owner];
         }
@@ -92,7 +87,7 @@ contract ProposalContract {
         uint256 approve = proposal.approve;
         uint256 reject = proposal.reject;
         uint256 pass = proposal.pass;
-
+        //change 3 :- rewriting code for calculate current state
         pass = pass % 2 == 1 ? (pass+1)/2 : pass/2;
         
        return approve > (reject + pass) ? true : false;
@@ -101,7 +96,8 @@ contract ProposalContract {
 
     // ****************** Query Functions ***********************
 
-    function isVoted(address _address) public view returns (bool) {
+    // change 4 - making this function private
+    function isVoted(address _address) private view returns (bool) {
         for (uint i = 0; i < voted_addresses.length; i++) {
             if (voted_addresses[i] == _address) {
                 return true;
